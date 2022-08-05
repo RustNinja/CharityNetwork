@@ -125,7 +125,7 @@ impl<T: Config> Pallet<T> {
 // This implementation allows the charity to be the recipient of funds that are burned elsewhere in
 // the runtime. For eample, it could be transaction fees, consensus-related slashing, or burns that
 // align incentives in other pallets.
-impl<T: Config> OnUnbalanced<NegativeImbalanceOf<T>> for Module<T> {
+impl<T: Config> OnUnbalanced<NegativeImbalanceOf<T>> for Pallet<T> {
 	fn on_nonzero_unbalanced(amount: NegativeImbalanceOf<T>) {
 		let numeric_amount = amount.peek();
 
