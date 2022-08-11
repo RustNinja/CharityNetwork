@@ -11,8 +11,10 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-use frame_support::{PalletId};
-use frame_support::traits::{Currency, Imbalance, OnUnbalanced};
+use frame_support::{
+	traits::{Currency, Imbalance, OnUnbalanced},
+	PalletId,
+};
 
 /// Hardcoded pallet ID; used to create the special Pot Account
 /// Must be exactly 8 characters long
@@ -47,6 +49,20 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId>;
 	}
 
+	#[pallet::genesis_config]
+	#[derive(Default)]
+	pub struct GenesisConfig {}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig {
+		fn build(&self) {
+			let _ = T::Currency::make_free_balance_be(
+				&<Pallet<T>>::account_id(),
+				T::Currency::minimum_balance(),
+			);
+		}
+	}
+
 	#[pallet::event]
 	#[pallet::generate_deposit(pub (super) fn deposit_event)]
 	pub enum Event<T: Config> {
@@ -54,6 +70,8 @@ pub mod pallet {
 		DonationReceived(T::AccountId, BalanceOf<T>, BalanceOf<T>),
 		/// An imbalance from elsewhere in the runtime has been absorbed by the Charity
 		ImbalanceAbsorbed(BalanceOf<T>, BalanceOf<T>),
+		/// Charity has allocated funds to a cause
+		FundsAllocated(T::AccountId, BalanceOf<T>, BalanceOf<T>),
 	}
 
 	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
@@ -61,7 +79,6 @@ pub mod pallet {
 	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T: Config> Pallet<T> {
-		
 		#[pallet::weight(10_000)]
 		pub fn donate(origin: OriginFor<T>, amount: BalanceOf<T>) -> DispatchResultWithPostInfo {
 			let donor = ensure_signed(origin)?;
@@ -72,9 +89,22 @@ pub mod pallet {
 			Self::deposit_event(Event::DonationReceived(donor, amount, Self::pot()));
 			Ok(().into())
 		}
-	}
 
-	
+		#[pallet::weight(10_000)]
+		pub fn allocate(
+			origin: OriginFor<T>,
+			amount: BalanceOf<T>,
+			account: T::AccountId,
+		) -> DispatchResultWithPostInfo {
+			ensure_root(origin)?;
+
+			T::Currency::transfer(&Self::account_id(), &account, amount, AllowDeath)
+				.map_err(|_| DispatchError::Other("Can't make donation"))?;
+
+			Self::deposit_event(Event::FundsAllocated(account, amount, Self::pot()));
+			Ok(().into())
+		}
+	}
 }
 impl<T: Config> Pallet<T> {
 	/// The account ID that holds the Charity's funds

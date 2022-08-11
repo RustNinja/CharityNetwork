@@ -285,7 +285,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
-		Charity: pallet_template,
+		CharityForUkraine: pallet_template,
 	}
 );
 
